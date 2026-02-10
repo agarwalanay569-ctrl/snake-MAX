@@ -1,0 +1,151 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>🐍 Snake MAX</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<style>
+*{box-sizing:border-box;font-family:system-ui,sans-serif}
+body{
+  margin:0;min-height:100vh;
+  background:radial-gradient(circle at top,#00ffcc,#001);
+  display:flex;justify-content:center;align-items:center;
+  color:white
+}
+.app{
+  width:360px;
+  background:rgba(0,0,0,.7);
+  padding:20px;
+  border-radius:20px;
+  box-shadow:0 0 40px #00ffcc;
+  text-align:center
+}
+canvas{
+  background:#000;
+  border-radius:12px;
+  box-shadow:0 0 20px #00ffcc inset;
+}
+.controls button{
+  font-size:22px;
+  padding:10px 14px;
+  margin:4px;
+  border:none;
+  border-radius:12px;
+  background:#00ffcc;
+  cursor:pointer
+}
+.msg{min-height:24px;margin-top:8px;font-size:14px}
+</style>
+</head>
+
+<body>
+<div class="app">
+<h2>🐍 Snake MAX</h2>
+<div>Score: <span id="score">0</span> | High: <span id="high">0</span></div>
+<canvas id="game" width="300" height="300"></canvas>
+
+<div class="controls">
+  <button onclick="setDir('up')">⬆️</button><br>
+  <button onclick="setDir('left')">⬅️</button>
+  <button onclick="pause()">⏸</button>
+  <button onclick="setDir('right')">➡️</button><br>
+  <button onclick="setDir('down')">⬇️</button>
+</div>
+
+<div class="msg" id="msg">Use arrow keys or buttons</div>
+</div>
+
+<script>
+const c=document.getElementById("game");
+const x=c.getContext("2d");
+const box=15;
+let snake=[{x:10*box,y:10*box}];
+let dir="RIGHT";
+let food=spawn();
+let score=0;
+let high=+localStorage.snakeHigh||0;
+let speed=120;
+let paused=false;
+let loop;
+
+document.getElementById("high").textContent=high;
+
+document.addEventListener("keydown",e=>{
+  if(e.key==="ArrowUp")setDir("up");
+  if(e.key==="ArrowDown")setDir("down");
+  if(e.key==="ArrowLeft")setDir("left");
+  if(e.key==="ArrowRight")setDir("right");
+  if(e.key===" ")pause();
+});
+
+function setDir(d){
+  if(d==="up"&&dir!=="DOWN")dir="UP";
+  if(d==="down"&&dir!=="UP")dir="DOWN";
+  if(d==="left"&&dir!=="RIGHT")dir="LEFT";
+  if(d==="right"&&dir!=="LEFT")dir="RIGHT";
+}
+
+function pause(){
+  paused=!paused;
+  document.getElementById("msg").textContent=
+    paused?"⏸ Paused":"▶ Playing";
+}
+
+function spawn(){
+  return{
+    x:Math.floor(Math.random()*19+1)*box,
+    y:Math.floor(Math.random()*19+1)*box
+  };
+}
+
+function hit(h,b){
+  return b.some(p=>p.x===h.x&&p.y===h.y);
+}
+
+function draw(){
+  if(paused)return;
+  x.clearRect(0,0,c.width,c.height);
+
+  snake.forEach((s,i)=>{
+    x.fillStyle=i?"#00cc99":"#00ffcc";
+    x.fillRect(s.x,s.y,box,box);
+  });
+
+  x.fillStyle="red";
+  x.fillRect(food.x,food.y,box,box);
+
+  let hx=snake[0].x,hy=snake[0].y;
+  if(dir==="LEFT")hx-=box;
+  if(dir==="RIGHT")hx+=box;
+  if(dir==="UP")hy-=box;
+  if(dir==="DOWN")hy+=box;
+
+  if(hx<0||hy<0||hx>=c.width||hy>=c.height||hit({x:hx,y:hy},snake)){
+    clearInterval(loop);
+    document.getElementById("msg").textContent="💀 Game Over — Refresh";
+    return;
+  }
+
+  if(hx===food.x&&hy===food.y){
+    score++;
+    document.getElementById("score").textContent=score;
+    if(score>high){
+      high=score;
+      localStorage.snakeHigh=high;
+      document.getElementById("high").textContent=high;
+    }
+    food=spawn();
+    if(speed>60){
+      speed-=5;
+      clearInterval(loop);
+      loop=setInterval(draw,speed);
+    }
+  }else snake.pop();
+
+  snake.unshift({x:hx,y:hy});
+}
+
+loop=setInterval(draw,speed);
+</script>
+</body>
+</html>
