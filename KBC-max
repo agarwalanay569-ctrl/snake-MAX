@@ -1,0 +1,266 @@
+<!DOCTYPE html>
+<html>
+<head>
+<title>KBC GOD MODE</title>
+<style>
+body{
+ font-family:Arial;
+ background:#0b0c2a;
+ color:white;
+ text-align:center;
+}
+#game{margin-top:20px;}
+button{
+ display:block;
+ margin:10px auto;
+ padding:10px;
+ width:60%;
+ background:#1e1f4d;
+ color:white;
+ border:none;
+ border-radius:8px;
+ cursor:pointer;
+}
+button:hover{background:#3336a3;}
+#bar{
+ height:8px;
+ background:lime;
+ width:100%;
+ margin:10px 0;
+}
+#ladder{
+ position:fixed;
+ right:10px;
+ top:10px;
+ text-align:left;
+ font-size:14px;
+}
+.active{color:yellow;font-weight:bold;}
+</style>
+</head>
+<body>
+
+<h1>🎙 Kaun Banega Crorepati</h1>
+
+<div id="ladder"></div>
+
+<div id="game">
+<h2 id="question"></h2>
+<div id="bar"></div>
+
+<button onclick="check(0)" id="opt0"></button>
+<button onclick="check(1)" id="opt1"></button>
+<button onclick="check(2)" id="opt2"></button>
+<button onclick="check(3)" id="opt3"></button>
+
+<p>💰 <span id="money">₹0</span></p>
+
+<button onclick="fifty()">💡 50-50</button>
+<button onclick="skip()">⏭ Skip</button>
+</div>
+
+<div id="end" style="display:none;">
+<h2 id="endText"></h2>
+<p>🏆 High Score: ₹<span id="high"></span></p>
+<button onclick="restart()">Play Again</button>
+</div>
+
+<script>
+// 💰 prize ladder
+const ladder=[
+1000,2000,3000,5000,10000,
+20000,40000,80000,160000,320000,
+640000,1250000,2500000,5000000,10000000
+];
+
+const questions=[
+{q:"Capital of India?",o:["Mumbai","New Delhi","Kolkata","Chennai"],a:1},
+{q:"Red Planet?",o:["Earth","Mars","Jupiter","Venus"],a:1},
+{q:"Father of Nation?",o:["Nehru","Bose","Gandhi","Bhagat"],a:2},
+{q:"Largest ocean?",o:["Atlantic","Indian","Pacific","Arctic"],a:2},
+{q:"Longest coastline state?",o:["Gujarat","TN","MH","AP"],a:0},
+{q:"Anthem writer?",o:["Bankim","Tagore","Naidu","Premchand"],a:1},
+{q:"Most abundant gas?",o:["Oxygen","Nitrogen","CO2","Hydrogen"],a:1},
+{q:"Currency of Japan?",o:["Yuan","Won","Yen","Ringgit"],a:2},
+{q:"Blood purifier organ?",o:["Heart","Lungs","Kidney","Liver"],a:2},
+{q:"Fe is?",o:["Fluorine","Iron","Francium","Zinc"],a:1},
+{q:"Red Fort built by?",o:["Akbar","Babur","Shah Jahan","Aurangzeb"],a:2},
+{q:"Independence year?",o:["1945","1946","1947","1950"],a:2},
+{q:"Smallest prime?",o:["0","1","2","3"],a:2},
+{q:"CAB value?",o:["6","8","7","5"],a:0},
+{q:"Longest border country?",o:["China","Pakistan","Bangladesh","Nepal"],a:2}
+];
+
+let current=0;
+let money=0;
+let timer;
+let timeLeft=15;
+
+let used5050=false;
+let usedSkip=false;
+
+const audioCtx=new (window.AudioContext||window.webkitAudioContext)();
+
+function loadQ(){
+ if(current>=questions.length){
+  endGame(true);
+  return;
+ }
+
+ resetBtns();
+ updateLadder();
+
+ const q=questions[current];
+ updateQ();
+
+ q.o.forEach((opt,i)=>{
+  const b=document.getElementById("opt"+i);
+  b.textContent=opt;
+  b.style.display="block";
+ });
+
+ startTimer();
+}
+
+function updateQ(){
+ document.getElementById("question").textContent=
+ questions[current].q+" ⏱ "+timeLeft;
+ document.getElementById("bar").style.width=(timeLeft/15*100)+"%";
+}
+
+function startTimer(){
+ clearInterval(timer);
+ timeLeft=15;
+
+ timer=setInterval(()=>{
+  timeLeft--;
+  updateQ();
+  if(timeLeft<=0){
+    clearInterval(timer);
+    endGame(false);
+  }
+ },1000);
+}
+
+function check(i){
+ if(!confirm("Lock kiya jaye?")) return;
+
+ clearInterval(timer);
+ const correct=questions[current].a;
+
+ if(i===correct){
+  money=ladder[current];
+  beep(true);
+  highlight(i,"green");
+
+  setTimeout(()=>{
+    current++;
+    document.getElementById("money").textContent="₹"+money;
+    loadQ();
+  },800);
+
+ }else{
+  beep(false);
+  highlight(i,"red");
+  highlight(correct,"green");
+
+  setTimeout(()=>endGame(false),1000);
+ }
+}
+
+function highlight(i,color){
+ document.getElementById("opt"+i).style.background=color;
+}
+
+function beep(win){
+ const o=audioCtx.createOscillator();
+ const g=audioCtx.createGain();
+
+ o.frequency.value=win?700:200;
+ o.connect(g);
+ g.connect(audioCtx.destination);
+ o.start();
+
+ g.gain.exponentialRampToValueAtTime(0.0001,audioCtx.currentTime+0.3);
+ setTimeout(()=>o.stop(),300);
+}
+
+// lifelines
+function fifty(){
+ if(used5050)return;
+ used5050=true;
+
+ const correct=questions[current].a;
+ let wrongs=[];
+
+ for(let i=0;i<4;i++){
+  if(i!==correct) wrongs.push(i);
+ }
+
+ wrongs.sort(()=>Math.random()-0.5);
+
+ for(let i=0;i<2;i++){
+  document.getElementById("opt"+wrongs[i]).style.display="none";
+ }
+}
+
+function skip(){
+ if(usedSkip)return;
+ usedSkip=true;
+ clearInterval(timer);
+ current++;
+ loadQ();
+}
+
+function resetBtns(){
+ for(let i=0;i<4;i++){
+  const b=document.getElementById("opt"+i);
+  b.style.background="#1e1f4d";
+  b.style.display="block";
+ }
+}
+
+function updateLadder(){
+ let html="";
+ for(let i=ladder.length-1;i>=0;i--){
+  html+=`<div class="${i===current?'active':''}">₹${ladder[i]}</div>`;
+ }
+ document.getElementById("ladder").innerHTML=html;
+}
+
+function endGame(win){
+ clearInterval(timer);
+
+ let high=localStorage.getItem("kbcHigh")||0;
+ if(money>high){
+  localStorage.setItem("kbcHigh",money);
+ }
+
+ document.getElementById("high").textContent=
+ localStorage.getItem("kbcHigh");
+
+ document.getElementById("game").style.display="none";
+ document.getElementById("end").style.display="block";
+
+ document.getElementById("endText").textContent=
+ win?"🏆 Crorepati! ₹"+money:"❌ Game Over! ₹"+money;
+}
+
+function restart(){
+ current=0;
+ money=0;
+ used5050=false;
+ usedSkip=false;
+
+ document.getElementById("money").textContent="₹0";
+ document.getElementById("game").style.display="block";
+ document.getElementById("end").style.display="none";
+
+ loadQ();
+}
+
+loadQ();
+</script>
+
+</body>
+</html>
